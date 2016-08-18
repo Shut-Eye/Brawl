@@ -1,0 +1,33 @@
+{
+  "name": "brawl",
+  "version": "0.0.0",
+  "description": "Brawl",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Shut-Eye/Brawl.git"
+  },
+  "keywords": [
+    "brawl",
+    "game",
+    "html5",
+    "OSG.js",
+    "webgl",
+    "node.js"
+  ],
+  "author": "TreePuncher, Exzotus",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Shut-Eye/Brawl/issues"
+  },
+  "homepage": "https://github.com/Shut-Eye/Brawl#readme",
+  "devDependencies": {
+    "gulp": "^3.9.1",
+    "gulp-changed": "^1.3.2",
+    "gulp-concat": "^2.6.0",
+    "gulp-plumber": "^1.1.0",
+    "gulp-typescript": "^2.13.6"
+  }
+}

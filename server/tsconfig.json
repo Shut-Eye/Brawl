@@ -1,0 +1,7 @@
+{
+    "compilerOptions": {
+        "noEmitOnError": true,
+        "module": "commonjs",
+        "target": "es5"
+    }
+}
