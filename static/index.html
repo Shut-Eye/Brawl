@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Brawl</title>
+		<style>
+			body {
+				position: absolute;
+				top: 0;
+				left: 0;
+				right: 0;
+				bottom: 0;
+				margin: 0;
+				padding: 0;
+			}
+			#ViewContainer,
+			#ViewContainer canvas {
+				position: absolute;
+				width: 100%;
+				height: 100%;
+			}
+		</style>
+    </head>
+    <body>
+        <div id="ViewContainer">
+			<!--
+			<canvas id="3DView" style="width:100%;height:80%;display: block; border: solid 2px black" ></canvas>
+			-->
+		</div>
+		
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r79/three.min.js"></script>
+        <script src="http://threejs.org/examples/js/loaders/OBJLoader.js"></script>
+		
+        <script src="Brawl.js"></script>
+        <script src="main.js"></script>
+    </body>
+</html>

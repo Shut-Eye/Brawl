@@ -1,7 +1,6 @@
 {
     "compilerOptions": {
         "noEmitOnError": true,
-        "out": "Brawl.js",
         "target": "es5"
     }
 }
