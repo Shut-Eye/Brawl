@@ -8,3 +8,9 @@ assets/
 osgjs/
 bin/
 node_modules/
+
+# other files #
+.*
+
+# include #
+!.gitignore
