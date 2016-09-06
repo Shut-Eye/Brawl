@@ -24,14 +24,63 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 module Brawl {
 
+	const AxisMap = {
+		0: GAMEINPUTMESSAGES.LeftRight,
+		1: GAMEINPUTMESSAGES.UpDown,
+		2: GAMEINPUTMESSAGES.CameraLeftRight,
+		3: GAMEINPUTMESSAGES.CameraUpDown,
+	}
+
+	const AxisCofMap = {
+		0: 1,
+		1: -1,
+		2: 1,
+		3: -1,
+	}
+
+	const KeyMap = {
+		0: GAMEINPUTMESSAGES.Action,
+		1: GAMEINPUTMESSAGES.Block,
+		2: GAMEINPUTMESSAGES.Kick,
+		3: GAMEINPUTMESSAGES.Punch,
+	}
+
+	// Input -> Temporally Sliced groups of 5 frames -> Accept first Input Token, Ignore Rest
+
+
+	// Input Stream Example
+    // OOOOOOOOO X ----- OOOXX XXX--- OOAAAA 		
+    // OOOOOOOOO X ----- OOOXx xxx--- OOAaaa a-----
+
+    // OOOOOOOOO X ----- OOOXO ----- OOAOOO  			KICK -> KICK -> PUNCH
+    // OOOOOOOOO X ----- OOOXo --X_h--- OOAaaa A_h		KICK -> STRONG KICK -> STRONG PUNCH
+    //  
+
+	// SAMPLE 2 //
+
+
 	// CONSTANTS //
 
+	const DeadZone: number = 0.3;
+	const DeadZoneI: number = 1 - DeadZone;
+
 	export const enum GAMEINPUTMESSAGES {
-		GIME_Forward,
-		GIME_Backward,
-		GIME_Right,
-		GIME_Left,
-		GIME_Jump,
+		LeftRight,
+		UpDown,
+		CameraLeftRight,
+		CameraUpDown,
+		Jump,
+		Action,
+		Kick,
+		Punch,
+		Block,
+		NullEvent,
+	}
+
+	export const enum GAMEACTORMASK {
+		Player  = 0x01,
+		NPC		= 0x02,
+		Static  = 0x04,
 	}
 
 	// INTERFACES //
@@ -94,8 +143,104 @@ module Brawl {
 
 	}
 
+	class xNpcEvent{
+		SourceNPC: number;
+		TargetNPC: number;
+
+/*
+		{
+			// Data
+			//... 
+		}
+*/
+	}
+
+	class PlayerNPCEvent{
+	}
+
+	class Player{
+		PlayerID: string;
+
+		constructor(ID: string = ""){
+			this.PlayerID = ID;
+		}
+	}
+
+	class Npc{
+		ID: number;
+	}
+
+	class Static{
+	}
+
 	class GamePlayModel {
-		
+		// Counters
+		PlayerInputCounter: number;
+
+		Players: 		Player[]	= [];
+		NPCs:	 		Npc[]		= [];
+		Statics: 		Static[]	= [];
+		NPCPayerevents: xNpcEvent[]	= [];
+		xNPCevents: 	xNpcEvent[]	= [];
+
+		AddPlayer1(){
+			this.Players.push(new Player("Player1"));
+		}
+
+		UpdatePlayers(evtQueue: InputEvent[]){
+			// Update Player Input 
+			if(this.PlayerInputCounter == 5){
+				this.PlayerInputCounter = 0;
+				// Handle Input
+				// Code...
+			}
+			else 
+				this.PlayerInputCounter++;
+
+			for (var P in this.Players) {
+				var Player = this.Players[P];
+
+				for(var InputMsg in evtQueue){
+					var Msg = evtQueue[InputMsg];
+					switch (Msg.MessageType) {
+						case GAMEINPUTMESSAGES.LeftRight:
+							console.log("MoveLeftRight: " + Msg.Magnitude);
+							break;
+						case GAMEINPUTMESSAGES.UpDown:
+							console.log("MoveUpDown: " +  Msg.Magnitude);
+							break;
+					}
+				}
+			}
+		}
+
+		UpdateNPCs(){
+			for(var eventIdx in this.xNPCevents){
+				var event 			= this.xNPCevents[eventIdx];
+				var EventRecipient 	= this.NPCs[event.TargetNPC];
+				var EventSource 	= this.NPCs[event.SourceNPC];
+
+			}
+
+			for(var eventIdx in this.NPCPayerevents){
+				var event = this.NPCPayerevents[eventIdx];
+			}
+		}
+
+		update(evtQueue: any){
+			this.UpdatePlayers(evtQueue);
+			this.UpdateNPCs();
+		}
+	}
+
+	class InputEvent{
+		MessageType: GAMEINPUTMESSAGES;
+		Magnitude: number;
+
+		constructor(type: GAMEINPUTMESSAGES = GAMEINPUTMESSAGES.NullEvent, magnitude: number = 0) {
+			this.MessageType	= type;
+			this.Magnitude		= magnitude;
+		}
 	}
 
 	class ClientEngine {
@@ -111,11 +256,7 @@ module Brawl {
 
 		ActiveCamera : GameCamera;
 
-		connect_controller(event: any){
-		}
-		
-		disconnect_controller(event: any){
-		}
+		GameState: GamePlayModel = new GamePlayModel();
 		
 		init(width: number, height: number){
 			this.Scene	  		= new GameScene;
@@ -134,16 +275,18 @@ module Brawl {
 			
 			//this.AddCube();
 			this.AddObj("head.obj");
+
+			this.GameState.AddPlayer1();
 		}
 
-		AddCube(){
+		AddCube(x: number = 1, y: number = 1, z: number = 1){
 			var object		= new GameStaticObject;
-			var Geo 		= new THREE.BoxGeometry(1, 1, 1);
+			var Geo 		= new THREE.BoxGeometry(x, y, z);
 			var material 	= new THREE.MeshBasicMaterial( { color: 0x00ff00 } );
 			var cube 		= new THREE.Mesh( Geo, material );
 			
-			object.Node = cube;
-			object.Object = Geo;
+			object.Node 	= cube;
+			object.Object 	= Geo;
 			
 			this.Scene.AddObject(object);
 		}
@@ -161,7 +304,7 @@ module Brawl {
 				});
 				
 				console.log(Geo);
-				
+
 				//Geo.material    = material;
 				object.Node 		 = Geo;
 				object.Object 		 = Geo;
@@ -171,18 +314,29 @@ module Brawl {
 			});
 		}
 
-		Update_GameInput(){
+		Update_GameObjects(InputQueue: any){
+			this.GameState.update(InputQueue);
+			this.ActiveCamera.Camera.rotation.y += 0.015;
+		}
+
+
+		Update_GameInput(): InputEvent[] {
+			var evtQueue : InputEvent[] = [];
+
 			var Gamepads = navigator.getGamepads();
 			for (var I = 0; I < Gamepads.length; ++I) {
-				var Gamepad = Gamepads[I];
-				var OldGamepad = this.Gamepads[I];
-				var Connected = Gamepad && Gamepad.connected;
+				var Gamepad 	 = Gamepads[I];
+				var OldGamepad 	 = this.Gamepads[I];
+				var Connected 	 = Gamepad && Gamepad.connected;
 				var OldConnected = OldGamepad && OldGamepad.connected;
 				
 				if (Connected && !OldConnected) {
 					// add new gampad
 					OldGamepad = CreateGamepad(Gamepad);
 					console.log( "Gamepad", I, "Connected:", Gamepad.id );
+					var NewEvent = new InputEvent();
+
+					evtQueue.push(NewEvent);
 					this.Gamepads[I] = OldGamepad;	// weird but valid
 				}
 				else if (OldConnected && !Connected) {
@@ -202,23 +356,41 @@ module Brawl {
 						var Btn = Gamepad.buttons[BtnIdx];
 						var OldBtn = OldGamepad.buttons[BtnIdx];
 						if (Btn.value !== OldBtn.value || Btn.pressed !== OldBtn.pressed) {
-							console.log('Gamepad', I, 'Btn', BtnIdx, 'changed:', OldBtn.value, '>>', Btn.value);
+							//console.log('Gamepad', I, 'Btn', BtnIdx, 'changed:', OldBtn.value, '>>', Btn.value);
 							OldBtn.pressed = Btn.pressed;
 							OldBtn.value = Btn.value;
+
+							var mapping = KeyMap[BtnIdx];
+							if (mapping != null)
+								evtQueue.push(new InputEvent(mapping, Btn.value));
 						}
 					}
 					
 					for (var AxisIdx = 0; AxisIdx < Gamepad.axes.length; ++AxisIdx) {
 						// detect/update button change
 						var Axis = Gamepad.axes[AxisIdx];
+						var Axis0 = Math.abs(Axis) > DeadZone ? Axis : 0;
 						var OldAxis = OldGamepad.axes[AxisIdx];
-						if (Axis !== OldAxis) {
-							console.log('Gamepad', I, 'Axis', AxisIdx, 'changed:', OldAxis, '>>', Axis);
-							OldGamepad.axes[AxisIdx] = Axis
+						if (Axis0 !== OldAxis) {
+							//console.log('Gamepad', I, 'Axis', AxisIdx, 'changed:', OldAxis, '>>', Axis);
+							OldGamepad.axes[AxisIdx] = Axis0;
+
+							var mapping = AxisMap[AxisIdx];
+							if (mapping != null)
+								var Mapped: number = 0;
+								if(Axis0 > 0){
+									var Mapped = (Axis0 - DeadZone) * 1/(DeadZoneI)
+								} else {
+									var Mapped = (Axis0 + DeadZone) * 1/(DeadZoneI)
+								}
+								
+							evtQueue.push(new InputEvent(mapping, Axis0 * AxisCofMap[AxisIdx] ? Mapped : Axis0));
 						}
 					}
 				}
 			}
+
+			return evtQueue;
 		}
 
 		Update_Draw(){
@@ -226,9 +398,8 @@ module Brawl {
 		}
 
 		Update_FixedStep(){
-			this.Update_GameInput();
+			this.Update_GameObjects(this.Update_GameInput());
 			this.Update_Draw();
-			this.ActiveCamera.Camera.rotation.y += 0.015;
 		}
 
 		Run(){
@@ -310,5 +481,8 @@ module Brawl {
 	}
 
 	function Rotate_Degree(Obj: SceneObject, x: number = 1, y: number = 1, z: number = 1){
+		Obj.Node.rotation.x += x;
+		Obj.Node.rotation.y += y;
+		Obj.Node.rotation.z += z;
 	}
 }
