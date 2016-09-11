@@ -23,6 +23,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 **********************************************************************/
 
 module Brawl {
+	'use strict';
 
 	const AxisMap = {
 		0: GAMEINPUTMESSAGES.LeftRight,
@@ -32,9 +33,9 @@ module Brawl {
 	}
 
 	const AxisCofMap = {
-		0: 1,
+		0:  1,
 		1: -1,
-		2: 1,
+		2:  1,
 		3: -1,
 	}
 
@@ -99,7 +100,7 @@ module Brawl {
 	class GameInputHandler {
 	}
 
-	class GameStaticObject{
+	class GameStaticObject {
 		Object : THREE.Geometry;
 		Node   : THREE.Object3D;
 	}
@@ -107,23 +108,34 @@ module Brawl {
 	class GameCamera{
 		Camera : THREE.Camera;
 		Node   : THREE.Object3D;
+
+		SetAspect(aspect: number){
+			this.Camera.aspect = aspect;
+			this.Camera.updateProjectionMatrix();
+		}
+
+		UpdateProjectionMatrix(){
+			this.Camera.updateProjectionMatrix();
+		}
 	}
 
 	class GameScene {
 		constructor(){
-			this.ThreeScene = new THREE.Scene();	
-			this.Manager	= new THREE.LoadingManager();
-			this.Loader 	= new THREE.OBJLoader(this.Manager);
-			
+			this.ThreeScene 	= new THREE.Scene();	
+			this.Manager		= new THREE.LoadingManager();
+			this.Loader 		= new THREE.OBJLoader(this.Manager);
+			this.ColladaLoader 	= THREE.ColladaLoader();
+
 			var Light = new THREE.AmbientLight(0x101030);
 			this.ThreeScene.add(Light);
 		}
 		
 		Objects: SceneObject[] = [];
 		
-		ThreeScene: any;
-		Loader: 	any;
-		Manager: 	any;
+		ThreeScene: 	any;
+		Loader: 		any;
+		Manager: 		any;
+		ColladaLoader: 	any;
 
 		AddObject(Obj){
 			console.log("Adding Object to Scene!");
@@ -135,10 +147,16 @@ module Brawl {
 
 		AddCamera(AspectRatio, Near, Far) : GameCamera {
 			var C 	 = new GameCamera;
-			C.Camera = new THREE.PerspectiveCamera(75, AspectRatio, Near, Far);
+			C.Camera = new THREE.PerspectiveCamera(55, AspectRatio, Near, Far);
 			C.Node   = C.Camera;
 			
 			return C;
+		}
+
+		LoadDae(file){
+			//this.ColladaLoader.load(file, function (result) {
+   			//	this.ThreeScene.add(result.scene);
+			//});
 		}
 
 	}
@@ -171,6 +189,19 @@ module Brawl {
 	}
 
 	class Static{
+	}
+
+	interface CameraController{
+		Reset();
+		Update(dt: number, Node: any);
+	}
+
+	class GameplayGameController{
+		Reset(){
+		}
+
+		Update(dt: number, Node: any){
+		}
 	}
 
 	class GamePlayModel {
@@ -244,17 +275,17 @@ module Brawl {
 	}
 
 	class ClientEngine {
-		Handler : GameInputHandler;
+		Handler: GameInputHandler;
 
-		Scene : GameScene;
+		Scene: GameScene;
 
-		Renderer : THREE.WebGLRenderer;
+		Renderer: THREE.WebGLRenderer;
 
 		AnimationHandle: number;
 
 		Gamepads: Gamepad[] = [];
 
-		ActiveCamera : GameCamera;
+		ActiveCamera: GameCamera;
 
 		GameState: GamePlayModel = new GamePlayModel();
 		
@@ -264,17 +295,18 @@ module Brawl {
 
 			document.body.appendChild( this.Renderer.domElement );
 			
-			console.log( "" + width/height  + " : Aspect Ratio");
+			console.log( "" + width / height  + " : Aspect Ratio");
 			console.log( "" + height 		+ " : Height");
 			console.log( "" + width 		+ " : Width");
-			
+
 			this.ActiveCamera 	= this.Scene.AddCamera(Math.min(width/height, 20), 
 													   0.1, 10000.0);
+			this.Resize(width, height);
 			
 			this.ActiveCamera.Node.position.z = 5;
-			
 			//this.AddCube();
-			this.AddObj("head.obj");
+			this.AddObj("assets/head.obj");
+			this.Scene.LoadDae("assets/test.dae");
 
 			this.GameState.AddPlayer1();
 		}
@@ -299,7 +331,7 @@ module Brawl {
 				Geo.traverse( child => {
 					if(child instanceof THREE.Mesh){
 						child.material.material = material;
-						child.scale *= 10;
+						//child.scale *= 10;
 					}
 				});
 				
@@ -314,13 +346,14 @@ module Brawl {
 			});
 		}
 
-		Update_GameObjects(InputQueue: any){
+
+		UpdateGameObjects(InputQueue: any){
 			this.GameState.update(InputQueue);
 			this.ActiveCamera.Camera.rotation.y += 0.015;
 		}
 
 
-		Update_GameInput(): InputEvent[] {
+		UpdateGameInput(): InputEvent[] {
 			var evtQueue : InputEvent[] = [];
 
 			var Gamepads = navigator.getGamepads();
@@ -393,13 +426,13 @@ module Brawl {
 			return evtQueue;
 		}
 
-		Update_Draw(){
+		UpdateDraw(){
 			this.Renderer.render(this.Scene.ThreeScene, this.ActiveCamera.Camera);
 		}
 
-		Update_FixedStep(){
-			this.Update_GameObjects(this.Update_GameInput());
-			this.Update_Draw();
+		UpdateFixedStep(){
+			this.UpdateGameObjects(this.UpdateGameInput());
+			this.UpdateDraw();
 		}
 
 		Run(){
@@ -410,7 +443,7 @@ module Brawl {
 				// console.log("Frame Start");
 				this.AnimationHandle = requestAnimationFrame(CB);
 				// update everything
-				this.Update_FixedStep();
+				this.UpdateFixedStep();
 				
 				//console.log("Frame End");
 			}
@@ -421,6 +454,13 @@ module Brawl {
 		Stop(){
 			cancelAnimationFrame(this.AnimationHandle);
 			this.AnimationHandle = null;
+		}
+
+		Resize(width: number, height: number){
+			console.log("Resizing RenderTarget");
+			this.Renderer.setSize(width, height);
+
+			this.ActiveCamera.SetAspect(width/height);
 		}
 	}
 

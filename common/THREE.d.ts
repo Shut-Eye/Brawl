@@ -10,12 +10,15 @@ declare module THREE {
         scale    : any;
     }
 
+    function ColladaLoader() : any;
+
     class WebGLRenderer {
         constructor();
         constructor(element: HTMLElement);
         
         render (x, y);
-        
+        setSize(x, y);
+
         domElement : any;
     }
                
@@ -36,6 +39,9 @@ declare module THREE {
     }
 
     class Camera extends Object3D{
+        updateProjectionMatrix();
+
+        aspect : number;
     }
                 
     class Mesh extends Object3D{

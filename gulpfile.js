@@ -2,7 +2,8 @@ var gulp = require('gulp'),
 	ts = require('gulp-typescript'),
 	plumber = require('gulp-plumber'),
     concat = require('gulp-concat'),
-    changed = require('gulp-changed');
+    changed = require('gulp-changed'),
+    sourcemaps = require('gulp-sourcemaps');
 
 var src = {
     clientTs: ['client/**/*.ts', 'common/**/*.ts'],
@@ -20,8 +21,10 @@ var tsProject = ts.createProject('tsconfig.json');
 gulp.task('client', function () {
     var work = gulp.src(src.clientTs)
 		.pipe(plumber())
+        .pipe(sourcemaps.init())
         .pipe(ts(tsProject)).js
         .pipe(concat('Brawl.js'))
+        .pipe(sourcemaps.write())
         .pipe(gulp.dest(out.client));
     return work;
 });
