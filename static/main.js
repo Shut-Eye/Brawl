@@ -1,6 +1,7 @@
 window.addEventListener('load', function() {
 	var ViewContainer = document.getElementById('ViewContainer');
 	var Client = Brawl.InitClientEngine(ViewContainer.clientWidth, ViewContainer.clientHeight);
+	window.Client = Client;
 
 	ViewContainer.appendChild(Client.Renderer.domElement);
 

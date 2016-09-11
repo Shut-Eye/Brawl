@@ -84,13 +84,32 @@ module Brawl {
 		Static  = 0x04,
 	}
 
-	// INTERFACES //
+	export const enum GAMEASSETTYPE {
+		Obj,
+		Dae,
+	}
+
+	// TYPES //
+
+	type Temp = any;
 
 	interface SceneObject{
 		Node   : THREE.Object3D;
 	}
 
 	// CLASSES //
+
+	class GameAsset {
+		constructor(url: string, type: GAMEASSETTYPE, data: any) {
+			this.Url	= url;
+			this.Type	= type;
+			this.Data	= data;
+		}
+
+		Url: string;
+		Type: GAMEASSETTYPE;
+		Data: any;
+	}
 
 	class GameInputMessage {
 		KC:		GAMEINPUTMESSAGES;
@@ -119,25 +138,36 @@ module Brawl {
 		}
 	}
 
+	class GameNode{
+		constructor(){
+			this.Node = new THREE.Object3D();
+		}
+
+		Node   : THREE.Object3D;
+	}
+
 	class GameScene {
 		constructor(){
 			this.ThreeScene 	= new THREE.Scene();	
 			this.Manager		= new THREE.LoadingManager();
-			this.Loader 		= new THREE.OBJLoader(this.Manager);
+			this.ObjLoader 		= new THREE.OBJLoader(this.Manager);
 			this.ColladaLoader 	= THREE.ColladaLoader();
 
 			var Light = new THREE.AmbientLight(0x101030);
 			this.ThreeScene.add(Light);
+
+			//var Node = THREE.Object3D();
 		}
 		
-		Objects: SceneObject[] = [];
+		Assets:			GameAsset[]	  = [];
+		Objects:		SceneObject[] = [];
 		
-		ThreeScene: 	any;
-		Loader: 		any;
-		Manager: 		any;
-		ColladaLoader: 	any;
+		ThreeScene: 	THREE.Scene;
+		ObjLoader: 		THREE.OBJLoader;
+		Manager: 		Temp;
+		ColladaLoader: 	Temp;
 
-		AddObject(Obj){
+		AddObject(Obj: SceneObject){
 			console.log("Adding Object to Scene!");
 			console.log(Obj);
 			
@@ -145,7 +175,7 @@ module Brawl {
 			this.ThreeScene.add(Obj.Node);
 		}
 
-		AddCamera(AspectRatio, Near, Far) : GameCamera {
+		AddCamera(AspectRatio: number, Near: number, Far: number) : GameCamera {
 			var C 	 = new GameCamera;
 			C.Camera = new THREE.PerspectiveCamera(55, AspectRatio, Near, Far);
 			C.Node   = C.Camera;
@@ -154,9 +184,36 @@ module Brawl {
 		}
 
 		LoadDae(file){
-			//this.ColladaLoader.load(file, function (result) {
-   			//	this.ThreeScene.add(result.scene);
-			//});
+			var SceneRoot	= new THREE.Object3D();
+
+			this.ColladaLoader.load(file, (result) => {
+				console.log(this);
+   				SceneRoot.add(result.scene);
+
+   				this.ThreeScene.add(SceneRoot);
+   				SceneRoot.rotation.x = Math.PI/2;
+   				SceneRoot.rotation.z = Math.PI/2;
+			});
+		}
+
+		LoadDaeAsync(file: string): Promise<any> {
+			return new Promise((resolve, reject) => {
+				this.ColladaLoader.load(file, (result) => {
+					console.warn('RESULT', result);
+					/*
+					var SceneRoot 	= new THREE.Object3D();
+
+					console.log(this);
+					SceneRoot.add(result.scene);
+
+					this.ThreeScene.add(SceneRoot);
+					SceneRoot.rotation.x = Math.PI/2;
+					SceneRoot.scale.z 	 = -1;
+					*/
+				}, (error) => {
+					console.warn('ERROR', error);
+				});
+			});
 		}
 
 	}
@@ -177,10 +234,17 @@ module Brawl {
 	}
 
 	class Player{
-		PlayerID: string;
+		PlayerID: 	string;
+		Node:		GameNode;
+		Dx:			number;
+		Dy:			number;
 
 		constructor(ID: string = ""){
 			this.PlayerID = ID;
+			this.Node = new GameNode();
+
+			this.Dx = 0;
+			this.Dy = 0;
 		}
 	}
 
@@ -193,15 +257,33 @@ module Brawl {
 
 	interface CameraController{
 		Reset();
-		Update(dt: number, Node: any);
+		Update(dt: number, Node: Temp);
 	}
 
 	class GameplayGameController{
 		Reset(){
 		}
 
-		Update(dt: number, Node: any){
+		Update(dt: number, Node: Temp){
 		}
+	}
+
+	function SetPlayerModelOBJ(model: string, player: Player, scene: GameScene){
+		scene.ObjLoader.load(model, (Geo) => {
+			var object		= new GameStaticObject;
+			var material 	= new THREE.MeshNormalMaterial();
+			
+			Geo.traverse( child => {
+				if(child instanceof THREE.Mesh){
+					child.material.material = material;
+					//child.scale *= 10;
+
+			}});
+
+			player.Node.Node.add(Geo);
+
+		});
+		return player;
 	}
 
 	class GamePlayModel {
@@ -214,8 +296,19 @@ module Brawl {
 		NPCPayerevents: xNpcEvent[]	= [];
 		xNPCevents: 	xNpcEvent[]	= [];
 
-		AddPlayer1(){
-			this.Players.push(new Player("Player1"));
+		Scene: GameScene;
+
+		constructor(scene: GameScene){
+			this.Scene = scene;
+		}
+
+		AddPlayer1() : Player{
+			// TODO: check if player 1 is already logged in
+			var NewPlayer = new Player("Player1");
+			this.Players.push(NewPlayer);
+			this.Scene.ThreeScene.add(NewPlayer.Node.Node);
+
+			return NewPlayer;
 		}
 
 		UpdatePlayers(evtQueue: InputEvent[]){
@@ -236,12 +329,17 @@ module Brawl {
 					switch (Msg.MessageType) {
 						case GAMEINPUTMESSAGES.LeftRight:
 							console.log("MoveLeftRight: " + Msg.Magnitude);
+							this.Players[0].Dx = Msg.Magnitude * .3;
 							break;
 						case GAMEINPUTMESSAGES.UpDown:
+							this.Players[0].Dy = -Msg.Magnitude * .2;
 							console.log("MoveUpDown: " +  Msg.Magnitude);
+
 							break;
 					}
 				}
+
+				Translate(this.Players[0].Node, this.Players[0].Dx, this.Players[0].Dy, 0);
 			}
 		}
 
@@ -250,7 +348,6 @@ module Brawl {
 				var event 			= this.xNPCevents[eventIdx];
 				var EventRecipient 	= this.NPCs[event.TargetNPC];
 				var EventSource 	= this.NPCs[event.SourceNPC];
-
 			}
 
 			for(var eventIdx in this.NPCPayerevents){
@@ -258,7 +355,7 @@ module Brawl {
 			}
 		}
 
-		update(evtQueue: any){
+		update(evtQueue: InputEvent[]){
 			this.UpdatePlayers(evtQueue);
 			this.UpdateNPCs();
 		}
@@ -275,23 +372,18 @@ module Brawl {
 	}
 
 	class ClientEngine {
-		Handler: GameInputHandler;
-
-		Scene: GameScene;
-
-		Renderer: THREE.WebGLRenderer;
-
-		AnimationHandle: number;
-
-		Gamepads: Gamepad[] = [];
-
-		ActiveCamera: GameCamera;
-
-		GameState: GamePlayModel = new GamePlayModel();
+		Handler:			GameInputHandler;
+		Scene:				GameScene;
+		Renderer:			THREE.WebGLRenderer;
+		AnimationHandle:	number;
+		Gamepads:			Gamepad[]		= [];
+		ActiveCamera:		GameCamera;
+		GameState:			GamePlayModel;
 		
 		init(width: number, height: number){
 			this.Scene	  		= new GameScene;
-			this.Renderer 		= new THREE.WebGLRenderer();
+			this.Renderer 		= new THREE.WebGLRenderer({ antialias: true });
+			this.GameState		= new GamePlayModel(this.Scene);
 
 			document.body.appendChild( this.Renderer.domElement );
 			
@@ -304,18 +396,19 @@ module Brawl {
 			this.Resize(width, height);
 			
 			this.ActiveCamera.Node.position.z = 5;
+			this.ActiveCamera.Node.position.y = 0;
 			//this.AddCube();
-			this.AddObj("assets/head.obj");
+			//this.AddObj("assets/head.obj");
 			this.Scene.LoadDae("assets/test.dae");
 
-			this.GameState.AddPlayer1();
+			SetPlayerModelOBJ("assets/head.obj", this.GameState.AddPlayer1(), this.Scene);
 		}
 
 		AddCube(x: number = 1, y: number = 1, z: number = 1){
 			var object		= new GameStaticObject;
 			var Geo 		= new THREE.BoxGeometry(x, y, z);
 			var material 	= new THREE.MeshBasicMaterial( { color: 0x00ff00 } );
-			var cube 		= new THREE.Mesh( Geo, material );
+			var cube 		= new THREE.Mesh(Geo, material);
 			
 			object.Node 	= cube;
 			object.Object 	= Geo;
@@ -323,8 +416,9 @@ module Brawl {
 			this.Scene.AddObject(object);
 		}
 
-		AddObj(model){
-			this.Scene.Loader.load(model, (Geo) => {
+		AddObj(Model : string){
+			this.Scene.ObjLoader.load(Model, (Geo) => {
+				console.log('Geo', Geo);
 				var object		= new GameStaticObject;
 				var material 	= new THREE.MeshNormalMaterial();
 				
@@ -334,8 +428,6 @@ module Brawl {
 						//child.scale *= 10;
 					}
 				});
-				
-				console.log(Geo);
 
 				//Geo.material    = material;
 				object.Node 		 = Geo;
@@ -347,83 +439,84 @@ module Brawl {
 		}
 
 
-		UpdateGameObjects(InputQueue: any){
+		UpdateGameObjects(InputQueue: InputEvent[]){
 			this.GameState.update(InputQueue);
-			this.ActiveCamera.Camera.rotation.y += 0.015;
 		}
 
 
 		UpdateGameInput(): InputEvent[] {
-			var evtQueue : InputEvent[] = [];
+			var EvtQueue : InputEvent[] = [];
 
-			var Gamepads = navigator.getGamepads();
-			for (var I = 0; I < Gamepads.length; ++I) {
-				var Gamepad 	 = Gamepads[I];
-				var OldGamepad 	 = this.Gamepads[I];
-				var Connected 	 = Gamepad && Gamepad.connected;
-				var OldConnected = OldGamepad && OldGamepad.connected;
+			var NewStates = navigator.getGamepads();
+			for (var I = 0; I < NewStates.length; ++I) {
+				var NewState 	 	= NewStates[I];
+				var Gamepad 	 	= this.Gamepads[I];
+				var NewConnected 	= NewState && NewState.connected;
+				var Connected		= Gamepad && Gamepad.connected;
 				
-				if (Connected && !OldConnected) {
+				if (NewConnected && !Connected) {
 					// add new gampad
-					OldGamepad = CreateGamepad(Gamepad);
-					console.log( "Gamepad", I, "Connected:", Gamepad.id );
+					Gamepad = CreateGamepad(NewState);
+					//console.log( "Gamepad", I, "Connected:", NewState.id );
 					var NewEvent = new InputEvent();
 
-					evtQueue.push(NewEvent);
-					this.Gamepads[I] = OldGamepad;	// weird but valid
+					EvtQueue.push(NewEvent);
+					this.Gamepads[I] = Gamepad;	// weird but valid
 				}
-				else if (OldConnected && !Connected) {
+				else if (Connected && !NewConnected) {
 					// disable missing gamepads
-					OldGamepad.connected = false;
-					console.log( "Gamepad", I, "Disconnected:", OldGamepad.id );
+					Gamepad.connected = false;
+					//console.log( "Gamepad", I, "Disconnected:", Gamepad.id );
 					
 					// todo: depress all buttons
 					
-					// todo: reset axies
+					// todo: reset axes
 				}
 				
 				// detect changes
-				if (Connected && OldConnected) {
-					for (var BtnIdx = 0; BtnIdx < Gamepad.buttons.length; ++BtnIdx) {
+				if (NewConnected && Connected) {
+					for (var BtnIdx = 0; BtnIdx < NewState.buttons.length; ++BtnIdx) {
 						// detect/update buttons change
-						var Btn = Gamepad.buttons[BtnIdx];
-						var OldBtn = OldGamepad.buttons[BtnIdx];
-						if (Btn.value !== OldBtn.value || Btn.pressed !== OldBtn.pressed) {
+						var BtnState	= NewState.buttons[BtnIdx];
+						var Btn			= Gamepad.buttons[BtnIdx];
+
+						if (BtnState.value !== Btn.value || BtnState.pressed !== Btn.pressed) {
 							//console.log('Gamepad', I, 'Btn', BtnIdx, 'changed:', OldBtn.value, '>>', Btn.value);
-							OldBtn.pressed = Btn.pressed;
-							OldBtn.value = Btn.value;
+							Btn.pressed = BtnState.pressed;
+							Btn.value = BtnState.value;
 
 							var mapping = KeyMap[BtnIdx];
 							if (mapping != null)
-								evtQueue.push(new InputEvent(mapping, Btn.value));
+								EvtQueue.push(new InputEvent(mapping, BtnState.value));
 						}
 					}
 					
-					for (var AxisIdx = 0; AxisIdx < Gamepad.axes.length; ++AxisIdx) {
+					for (var AxisIdx = 0; AxisIdx < NewState.axes.length; ++AxisIdx) {
 						// detect/update button change
-						var Axis = Gamepad.axes[AxisIdx];
-						var Axis0 = Math.abs(Axis) > DeadZone ? Axis : 0;
-						var OldAxis = OldGamepad.axes[AxisIdx];
-						if (Axis0 !== OldAxis) {
+						var AxisState0	= NewState.axes[AxisIdx];
+						var AxisState	= Math.abs(AxisState0) > DeadZone ? AxisState0 : 0;
+						var Axis		= Gamepad.axes[AxisIdx];
+
+						if (AxisState !== Axis) {
 							//console.log('Gamepad', I, 'Axis', AxisIdx, 'changed:', OldAxis, '>>', Axis);
-							OldGamepad.axes[AxisIdx] = Axis0;
+							Gamepad.axes[AxisIdx] = AxisState;
 
 							var mapping = AxisMap[AxisIdx];
 							if (mapping != null)
 								var Mapped: number = 0;
-								if(Axis0 > 0){
-									var Mapped = (Axis0 - DeadZone) * 1/(DeadZoneI)
+								if(AxisState > 0){
+									var Mapped = (AxisState - DeadZone) * 1/(DeadZoneI)
 								} else {
-									var Mapped = (Axis0 + DeadZone) * 1/(DeadZoneI)
+									var Mapped = (AxisState + DeadZone) * 1/(DeadZoneI)
 								}
-								
-							evtQueue.push(new InputEvent(mapping, Axis0 * AxisCofMap[AxisIdx] ? Mapped : Axis0));
+
+							EvtQueue.push(new InputEvent(mapping, AxisState * AxisCofMap[AxisIdx] ? Mapped : AxisState));
 						}
 					}
 				}
 			}
 
-			return evtQueue;
+			return EvtQueue;
 		}
 
 		UpdateDraw(){
@@ -524,5 +617,31 @@ module Brawl {
 		Obj.Node.rotation.x += x;
 		Obj.Node.rotation.y += y;
 		Obj.Node.rotation.z += z;
+	}
+
+	export function Ajax(url: string): Promise<any> {
+		return new Promise((resolve, reject) => {
+			var xhr = new XMLHttpRequest();
+
+			xhr.open("GET", url, true);
+
+			xhr.onreadystatechange = function(oEvent) {
+				if (xhr.readyState === 4) {
+					if (xhr.status === 200) {
+						console.log("SUCCESS", xhr);
+						resolve(xhr.response);
+					} else {
+						console.log("ERROR", xhr);
+						reject(xhr);
+					}
+				}
+			};
+
+			xhr.onerror = () => {
+				console.error('NOPE', xhr);
+			}
+
+			xhr.send(null);
+		});
 	}
 }
