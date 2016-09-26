@@ -3,5 +3,6 @@
         "noEmitOnError": true,
         "target": "es5",
         "sourceMap": true
-    }
+    },
+    "compileOnSave": false
 }

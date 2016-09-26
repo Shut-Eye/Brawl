@@ -1,13 +1,16 @@
 # EditorConfig is awesome: http://EditorConfig.org
 
-# top-most EditorConfig file
+# top-most EditorConfig file #
 root = true
 
-# Unix-style newlines with a newline ending every file
+# unix-style newlines with no newline ending for all files #
 [*]
 charset = utf-8
-insert_final_newline = false
-
-[*.ts]
+end_of_line = lf
 indent_style = tab
 indent_size = 4
+insert_final_newline = false
+
+# html #
+[*.(htm|html)]
+indent_size = 2

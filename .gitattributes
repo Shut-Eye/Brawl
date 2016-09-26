@@ -1,0 +1,14 @@
+# use Unix line-endings #
+* text eol=lf
+
+# explicit text files #
+*.css text
+*.html text
+*.js text
+*.ts text
+
+# explict text files with CRLF #
+# *.SAMPLE text eol=crlf
+
+# Explicit binary files
+# *.SAMPLE binary

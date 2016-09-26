@@ -4,6 +4,7 @@ var gulp = require('gulp'),
     concat = require('gulp-concat'),
     changed = require('gulp-changed'),
     sourcemaps = require('gulp-sourcemaps');
+var typescript = require('typescript');
 
 var src = {
     clientTs: ['client/**/*.ts', 'common/**/*.ts'],
@@ -16,7 +17,9 @@ var out = {
 }
 
 // typescript project
-var tsProject = ts.createProject('tsconfig.json');
+var tsProject = ts.createProject('tsconfig.json', {
+    typescript: require('typescript')
+});
 
 gulp.task('client', function () {
     var work = gulp.src(src.clientTs)

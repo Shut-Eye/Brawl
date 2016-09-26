@@ -176,6 +176,8 @@ declare module THREE {
 
 	class Mesh extends Object3D {
 		constructor(x, y);
+
+		material: any;
 	}
 
 	class LoadingManager {
