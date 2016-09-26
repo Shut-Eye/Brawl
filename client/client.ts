@@ -248,19 +248,23 @@ module Brawl {
 	export class Player{
 		PlayerID: 	string;
 		Node:		GameNode;
-		Dx:			number;
-		Dy:			number;
+		Drag:		number;
+
+		Dv:					Vec3;
+		ControllerInput:	Vec3;
+
 
 		Add(Obj: SceneObject){
 			this.Node.Node_Impl.add(Obj.Node_Impl);
 		}
 
 		constructor(ID: string = ""){
-			this.PlayerID = ID;
-			this.Node = new GameNode();
+			this.PlayerID 	= ID;
+			this.Node 		= new GameNode();
+			this.Drag 		= 0.25;
 
-			this.Dx = 0;
-			this.Dy = 0;
+			this.Dv					= new Vec3();
+			this.ControllerInput	= new Vec3();
 		}
 	}
 
@@ -327,17 +331,27 @@ module Brawl {
 					switch (Msg.MessageType) {
 						case GAMEINPUTMESSAGES.LeftRight:
 							console.log("MoveLeftRight: " + Msg.Magnitude);
-							this.Players[0].Dx = Msg.Magnitude * .3;
+							Player.ControllerInput.x = Msg.Magnitude * DeadZone;
 							break;
 						case GAMEINPUTMESSAGES.UpDown:
-							this.Players[0].Dy = Msg.Magnitude * .2;
+							Player.ControllerInput.y = Msg.Magnitude * DeadZone;
 							console.log("MoveUpDown: " +  Msg.Magnitude);
-
 							break;
 					}
 				}
 
-				Translate(this.Players[0].Node, this.Players[0].Dx, 0, this.Players[0].Dy);
+				var ControllerInput = new Vec3(0, 0, 0);
+				var M = Mag3(Player.ControllerInput);
+
+				if(M > 0.01){
+					ControllerInput = Player.ControllerInput;
+				}
+
+				console.log(M);
+				console.log(ControllerInput);
+
+				Player.Dv = Add3(Sub3(Player.Dv, Scale3( Player.Dv, Player.Drag)), ControllerInput);
+				Translate(this.Players[0].Node, this.Players[0].Dv.x, 0, this.Players[0].Dv.y);
 			}
 		}
 
@@ -444,7 +458,7 @@ module Brawl {
 
 				if (NewConnected && !Connected) {
 					// add new gampad
-					Gamepad = CreateGamepad(NewState);
+					Gamepad = CreateController(NewState);
 					//console.log( "Gamepad", I, "Connected:", NewState.id );
 					var NewEvent = new InputEvent();
 
@@ -563,9 +577,9 @@ module Brawl {
 		return player;
 	}
 
-	function CreateGamepad(Source: Gamepad): Controller {
+	function CreateController(Source: Gamepad): Controller {
 		// todo: return a custom type instead of native 'Gamepad'
-		var New: Gamepad = {
+		var New: Controller = {
 			id: 		Source.id,
 			index:		Source.index,
 			mapping:	Source.mapping,

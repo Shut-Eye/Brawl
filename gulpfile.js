@@ -5,6 +5,7 @@ var gulp = require('gulp'),
     changed = require('gulp-changed'),
     sourcemaps = require('gulp-sourcemaps');
 var typescript = require('typescript');
+var jasmine = require('gulp-jasmine');
 
 var src = {
     clientTs: ['client/**/*.ts', 'common/**/*.ts'],
@@ -53,4 +54,9 @@ gulp.task('watch:server', function taskWatch() {
 gulp.task('watch', function taskWatch() {
     gulp.watch(src.clientTs, ['client']);
     gulp.watch(src.serverTs, ['server']);
+});
+
+gulp.task('test', function() {
+	gulp.src('tests/test.js')
+        .pipe(jasmine());
 });
